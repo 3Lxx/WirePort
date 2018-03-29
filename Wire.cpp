@@ -73,7 +73,7 @@ TwoWire::TwoWire()
 *   \return void
 *   \brief open file descriptor for i2c device
 ******************************************************************************/
-TwoWire::TwoWire(std::String device)
+TwoWire::TwoWire(std::string device)
 {
 	fd = open(I2C_FILE_NAME, O_RDWR);	//TODO make this flexible using device
 	if (fd == -1)
