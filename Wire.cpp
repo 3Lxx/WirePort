@@ -50,7 +50,13 @@ void (*TwoWire::user_onRequest)(void);
 void (*TwoWire::user_onReceive)(int);
 
 // Constructors ////////////////////////////////////////////////////////////////
-
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn TwoWire()
+*
+*   \param void
+*   \return void
+*   \brief open file descriptor for i2c device
+******************************************************************************/
 TwoWire::TwoWire()
 {
 	this->fd = open("/dev/i2c-0", O_RDWR);	//revisit this to make device flexible
@@ -60,9 +66,30 @@ TwoWire::TwoWire()
 		exit(1);
 	}
 }
-
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn TwoWire()
+*
+*   \param char[10] device
+*   \return void
+*   \brief open file descriptor for i2c device
+******************************************************************************/
+TwoWire::TwoWire(char[10] device)
+{
+	this->fd = open(device, O_RDWR);	
+	if (this->fd == -1)
+	{
+		std::cerr<<"Could not open i2c device"<<std::endl;
+		exit(1);
+	}
+}
 // Public Methods //////////////////////////////////////////////////////////////
-
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn begin()
+*
+*   \param void
+*   \return void
+*   \brief set rx & tx buffers to 0
+******************************************************************************/
 void TwoWire::begin(void)
 {
   rxBufferIndex = 0;
@@ -85,18 +112,39 @@ void TwoWire::begin(int address)
   begin((uint8_t)address);
 }*/
 
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn end()
+*
+*   \param void
+*   \return void
+*   \brief close file descriptor of i2c device
+******************************************************************************/
 void TwoWire::end(void)	//CHECKME
 {
 //  twi_disable();
-	close(this->fd);
+	close(fd);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn setClock()
+*
+*   \param uint32_t clock
+*   \return void
+*   \brief set i2c clock speed
+******************************************************************************/
 void TwoWire::setClock(uint32_t clock) //TODO
 {
 //  twi_setFrequency(clock);
 	std::cerr<<"Could not set i2c clock frequency"<<std::endl;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn requestFrom()
+*
+*   \param uint8_t address, uint8_t quantity, uint32_t iaddress, uint8_t isize, uint8_t sendStop
+*   \return number of read bytes
+*   \brief request a quantity of bytes from the device at address and write them to rxBuffer
+******************************************************************************/
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t iaddress, uint8_t isize, uint8_t sendStop) //TODO revisit this example
 {
   if (isize > 0) {
@@ -157,6 +205,13 @@ uint8_t TwoWire::requestFrom(int address, int quantity, int sendStop)
   return requestFrom((uint8_t)address, (uint8_t)quantity, (uint8_t)sendStop);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn requestFrom()
+*
+*   \param uint8_t address
+*   \return void
+*   \brief set the target address and reset the tx buffer
+******************************************************************************/
 void TwoWire::beginTransmission(uint8_t address)
 {
   // indicate that we are transmitting
@@ -186,6 +241,13 @@ void TwoWire::beginTransmission(int address)
 //	no call to endTransmission(true) is made. Some I2C
 //	devices will behave oddly if they do not see a STOP.
 //
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn endTransmission()
+*
+*   \param uint8_t sendStop
+*   \return number of sent bytes
+*   \brief send the tx buffer data bytewise to the target
+******************************************************************************/
 uint8_t TwoWire::endTransmission(uint8_t sendStop) //TODO revisit and use i2c_smbus_write_block_data instead?
 {
 	int ret = 0;
@@ -221,6 +283,13 @@ uint8_t TwoWire::endTransmission(void)
 // must be called in:
 // slave tx event callback
 // or after beginTransmission(address)
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn write()
+*
+*   \param uint8_t data
+*   \return TODO
+*   \brief write data byte to tx buffer
+******************************************************************************/
 size_t TwoWire::write(uint8_t data)
 {
   if(transmitting){
@@ -246,6 +315,13 @@ size_t TwoWire::write(uint8_t data)
 // must be called in:
 // slave tx event callback
 // or after beginTransmission(address)
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn write()
+*
+*   \param uint8_t data, size_t quantity
+*   \return number of written bytes
+*   \brief write a quantity of data bytes to tx buffer
+******************************************************************************/
 size_t TwoWire::write(const uint8_t *data, size_t quantity)
 {
   if(transmitting){
@@ -264,6 +340,13 @@ size_t TwoWire::write(const uint8_t *data, size_t quantity)
 // must be called in:
 // slave rx event callback
 // or after requestFrom(address, numBytes)
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn available()
+*
+*   \param void
+*   \return number of bytes in rx buffer
+*   \brief return the number of bytes in rx buffer
+******************************************************************************/
 int TwoWire::available(void)
 {
   return rxBufferLength - rxBufferIndex;
@@ -272,6 +355,13 @@ int TwoWire::available(void)
 // must be called in:
 // slave rx event callback
 // or after requestFrom(address, numBytes)
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn read()
+*
+*   \param void
+*   \return data byte from rx buffer
+*   \brief read and remove one byte from the rx buffer
+******************************************************************************/
 int TwoWire::read(void)
 {
   int value = -1;
@@ -293,6 +383,13 @@ int TwoWire::read(void)
 // must be called in:
 // slave rx event callback
 // or after requestFrom(address, numBytes)
+///////////////////////////////////////////////////////////////////////////////
+/*!  \fn peek()
+*
+*   \param void
+*   \return data byte from rx buffer
+*   \brief read but not remove the last received byte from the rxBuffer
+******************************************************************************/
 int TwoWire::peek(void)
 {
   int value = -1;

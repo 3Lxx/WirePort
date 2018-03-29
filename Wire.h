@@ -51,6 +51,7 @@ class TwoWire
     static void onReceiveService(uint8_t*, int);
   public:
     TwoWire();
+    TwoWire(char[10] device);
     void begin();
    // void begin(uint8_t);
    // void begin(int);
