@@ -59,7 +59,7 @@ void (*TwoWire::user_onReceive)(int);
 ******************************************************************************/
 TwoWire::TwoWire()
 {
-	fd = open("/dev/i2c-0", O_RDWR);	//revisit this to make device flexible
+	fd = open("/dev/i2c-0", O_RDWR);	
 	if (this->fd == -1)
 	{
 		std::cerr<<"Could not open i2c device"<<std::endl;
@@ -73,9 +73,9 @@ TwoWire::TwoWire()
 *   \return void
 *   \brief open file descriptor for i2c device
 ******************************************************************************/
-TwoWire::TwoWire(string device)
+TwoWire::TwoWire(std::String device)
 {
-	fd = open(device, O_RDWR);	
+	fd = open(I2C_FILE_NAME, O_RDWR);	//TODO make this flexible using device
 	if (fd == -1)
 	{
 		std::cerr<<"Could not open i2c device"<<std::endl;

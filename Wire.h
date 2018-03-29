@@ -25,7 +25,9 @@
 
 #include <inttypes.h>
 #include <string>
+
 #define BUFFER_LENGTH 32
+#define I2C_FILE_NAME "/dev/i2c-0"
 
 // WIRE_HAS_END means Wire has end()
 #define WIRE_HAS_END 1
@@ -51,7 +53,7 @@ class TwoWire
     static void onReceiveService(uint8_t*, int);
   public:
     TwoWire();
-    TwoWire(string);
+    TwoWire(std::string);
     void begin();
    // void begin(uint8_t);
    // void begin(int);
