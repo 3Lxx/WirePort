@@ -7,7 +7,8 @@
 using namespace std;
 	
 #define TARGET_ADDR 32	//0x20 is standard PCA9555 address
-#define NUM_REGS 8		//PCA9555 has 8 registers
+#define TARGET_REG 0
+#define NUM_REGS 2		//PCA9555 has 8 registers
 
 void printRegisters()
 {
@@ -16,7 +17,7 @@ void printRegisters()
 	Wire.beginTransmission(TARGET_ADDR);
 	Wire.write(0); //start reading at first register
 	Wire.endTransmission();
-	Wire.requestFrom(TARGET_ADDR, NUM_REGS);
+	Wire.requestFrom(TARGET_REG, NUM_REGS);
 	
 	for(int i=0; i<NUM_REGS;i++)
 	{
@@ -33,7 +34,7 @@ int main (int argc, char *argv[])
 	
 	Wire.begin();
 	printRegisters();
-	
+	Wire.end();
 	cout<<"Done"<<endl;
 	return 0;
 } 

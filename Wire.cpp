@@ -254,7 +254,7 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop) //TODO revisit and use i2c_sm
   // transmit buffer (blocking)
     if( ioctl(fd, I2C_SLAVE, txAddress) < 0 ) //Set target device address
     {
-    	std::cerr<<"Failed to set slave address: "<< txAddress << std::endl;
+    	perror(i2cSetAddress"");
     }
 	for (int i=0; i< txBufferLength; i++) 
 	{	
