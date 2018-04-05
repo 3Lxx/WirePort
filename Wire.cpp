@@ -59,11 +59,15 @@ void (*TwoWire::user_onReceive)(int);
 ******************************************************************************/
 TwoWire::TwoWire()
 {
-	fd = open("/dev/i2c-0", O_RDWR);	
+	fd = open("/dev/i2c-1", O_RDWR);	
 	if (this->fd == -1)
 	{
 		std::cerr<<"Could not open i2c device"<<std::endl;
 		exit(1);
+	}
+	else
+	{
+		std::cout<<"opened i2c-1 device "<<std::endl;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,6 +85,10 @@ TwoWire::TwoWire(std::string device)
 		std::cerr<<"Could not open i2c device"<<std::endl;
 		exit(1);
 	}
+	else
+		{
+			std::cout<<"opened "<<I2c_FILE_NAME<<std::endl;
+		}
 }
 // Public Methods //////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -170,7 +178,7 @@ uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t iaddres
     quantity = BUFFER_LENGTH;
   }
   // perform block read into buffer
-  uint8_t read = i2c_smbus_read_i2c_block_data(fd, address, quantity, rxBuffer);
+  uint8_t read = i2c_smbus_read_i2c_block_data(fd, 0, quantity, rxBuffer);
   if (read == quantity) 
   {
 	std::cout<<"block-read OK"<<std::endl;
@@ -254,7 +262,7 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop) //TODO revisit and use i2c_sm
   // transmit buffer (blocking)
     if( ioctl(fd, I2C_SLAVE, txAddress) < 0 ) //Set target device address
     {
-    	perror(i2cSetAddress"");
+    	perror("i2cSetAddress");
     }
 	for (int i=0; i< txBufferLength; i++) 
 	{	
