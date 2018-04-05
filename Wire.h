@@ -25,6 +25,7 @@
 
 #include <inttypes.h>
 #include <string>
+#include <unistd.h>
 
 #define BUFFER_LENGTH 32
 #define I2C_FILE_NAME "/dev/i2c-1"
@@ -35,7 +36,7 @@
 class TwoWire
 {
   private:
-	int fd;	//File descriptor used to access i2c device
+	FILE *fd;	//File descriptor used to access i2c device
 	
     static uint8_t rxBuffer[];
     static uint8_t rxBufferIndex;

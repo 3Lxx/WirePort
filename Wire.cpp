@@ -20,8 +20,9 @@
   
   Ported to Linux SmBus library based on https://github.com/mhct/wire-linux
 */
-
+#include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include <linux/i2c-dev.h>
@@ -59,16 +60,7 @@ void (*TwoWire::user_onReceive)(int);
 ******************************************************************************/
 TwoWire::TwoWire()
 {
-	fd = open("/dev/i2c-1", O_RDWR);	
-	if (this->fd == -1)
-	{
-		std::cerr<<"Could not open i2c device"<<std::endl;
-		exit(1);
-	}
-	else
-	{
-		std::cout<<"opened i2c-1 device "<<std::endl;
-	}
+
 }
 ///////////////////////////////////////////////////////////////////////////////
 /*!  \fn TwoWire()
@@ -79,16 +71,7 @@ TwoWire::TwoWire()
 ******************************************************************************/
 TwoWire::TwoWire(std::string device)
 {
-	fd = open(I2C_FILE_NAME, O_RDWR);	//TODO make this flexible using device
-	if (fd == -1)
-	{
-		std::cerr<<"Could not open i2c device"<<std::endl;
-		exit(1);
-	}
-	else
-		{
-			std::cout<<"opened "<<I2c_FILE_NAME<<std::endl;
-		}
+
 }
 // Public Methods //////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -130,7 +113,7 @@ void TwoWire::begin(int address)
 void TwoWire::end(void)	//CHECKME
 {
 //  twi_disable();
-	close(fd);
+	fclose(fd);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -178,20 +161,20 @@ uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t iaddres
     quantity = BUFFER_LENGTH;
   }
   // perform block read into buffer
-  uint8_t read = i2c_smbus_read_i2c_block_data(fd, 0, quantity, rxBuffer);
-  if (read == quantity) 
+  uint8_t rd = fread(&rxBuffer, sizeof(uint8_t), quantity,fd);
+  if (rd == quantity)
   {
 	std::cout<<"block-read OK"<<std::endl;
   } 
   else 
   {
-	  std::cerr<<"block-read not OK"<<std::endl;
+	  perror("Error reading registers");
   }
   // set rx buffer iterator vars
   rxBufferIndex = 0;
-  rxBufferLength = read;
+  rxBufferLength = rd;
 
-  return read;
+  return rd;
 }
 
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint8_t sendStop) {
@@ -258,20 +241,23 @@ void TwoWire::beginTransmission(int address)
 ******************************************************************************/
 uint8_t TwoWire::endTransmission(uint8_t sendStop) //TODO revisit and use i2c_smbus_write_block_data instead?
 {
+	fd = fopen("/dev/i2c-1", "r+");
+	if (fd < 0 )
+	{
+		perror("i2cOpen");
+		exit(1);
+	}
 	int ret = 0;
   // transmit buffer (blocking)
     if( ioctl(fd, I2C_SLAVE, txAddress) < 0 ) //Set target device address
     {
     	perror("i2cSetAddress");
+    	exit(1);
     }
-	for (int i=0; i< txBufferLength; i++) 
-	{	
-		ret += i2c_smbus_write_byte(fd, txBuffer[i]); //use write_byte_data instead?
-	}
-	if (ret != txBufferLength) 
-	{
-		std::cerr<<"Transmission fail: txBufferLength: "<<txBufferLength<<"\t transmitted: "<<ret<<std::endl;
-	}
+    ret = fwrite(txbuffer, sizeof(uint8_t), txBufferLength,fd);
+    if ( ret < 0 ) {
+    	perror("i2cWrite Error");
+    }
   // reset tx buffer iterator vars
   txBufferIndex = 0;
   txBufferLength = 0;
