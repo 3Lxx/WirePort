@@ -17,23 +17,16 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  
   Modified 2012 by Todd Krein (todd@krein.org) to implement repeated starts
-  
-  Ported to Linux SmBus library based on https://github.com/mhct/wire-linux
 */
-#include <stdint.h>
+
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <linux/i2c-dev.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
 #include <iostream>
-#include <unistd.h>
+#include <bitset>
 
 #include "Wire.h"
+#include "wrapper.h"
 
 // Initialize Class Variables //////////////////////////////////////////////////
 
@@ -60,19 +53,8 @@ void (*TwoWire::user_onReceive)(int);
 ******************************************************************************/
 TwoWire::TwoWire()
 {
-
 }
-///////////////////////////////////////////////////////////////////////////////
-/*!  \fn TwoWire()
-*
-*   \param char[10] device
-*   \return void
-*   \brief open file descriptor for i2c device
-******************************************************************************/
-TwoWire::TwoWire(std::string device)
-{
 
-}
 // Public Methods //////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 /*!  \fn begin()
@@ -90,18 +72,15 @@ void TwoWire::begin(void)
   txBufferLength = 0;
 }
 
-/*void TwoWire::begin(uint8_t address)
+void TwoWire::begin(uint8_t address)
 {
-  twi_setAddress(address);
-  twi_attachSlaveTxEvent(onRequestService);
-  twi_attachSlaveRxEvent(onReceiveService);
-  begin();
+	//TODO
 }
 
 void TwoWire::begin(int address)
 {
   begin((uint8_t)address);
-}*/
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /*!  \fn end()
@@ -110,12 +89,10 @@ void TwoWire::begin(int address)
 *   \return void
 *   \brief close file descriptor of i2c device
 ******************************************************************************/
-void TwoWire::end(void)	//CHECKME
+void TwoWire::end(void)
 {
-//  twi_disable();
-	fclose(fd);
+	//TODO
 }
-
 ///////////////////////////////////////////////////////////////////////////////
 /*!  \fn setClock()
 *
@@ -123,12 +100,10 @@ void TwoWire::end(void)	//CHECKME
 *   \return void
 *   \brief set i2c clock speed
 ******************************************************************************/
-void TwoWire::setClock(uint32_t clock) //TODO
+void TwoWire::setClock(uint32_t clock)
 {
-//  twi_setFrequency(clock);
-	std::cerr<<"Could not set i2c clock frequency"<<std::endl;
+  //TODO
 }
-
 ///////////////////////////////////////////////////////////////////////////////
 /*!  \fn requestFrom()
 *
@@ -136,45 +111,51 @@ void TwoWire::setClock(uint32_t clock) //TODO
 *   \return number of read bytes
 *   \brief request a quantity of bytes from the device at address and write them to rxBuffer
 ******************************************************************************/
-uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t iaddress, uint8_t isize, uint8_t sendStop) //TODO revisit this example
+int8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t iaddress, uint8_t isize, uint8_t sendStop)
 {
-  if (isize > 0) {
-  // send internal address; this mode allows sending a repeated start to access
-  // some devices' internal registers. This function is executed by the hardware
-  // TWI module on other processors (for example Due's TWI_IADR and TWI_MMR registers)
+	int8_t count = 0;
+    fd = open(i2c_name, O_RDWR);
 
-  beginTransmission(address);
+    if (fd < 0)
+	{
+        perror("Failed to open device");
+        return(-1);
+    }
+    if (ioctl(fd, I2C_SLAVE, address) < 0)
+	{
+        perror("Failed to select device");
+        close(fd);
+        return(-1);
+    }
+    if (wrappedWrite(fd, &iaddress, 1) != 1)
+	{
+        perror("Failed to write reg");
+        close(fd);
+        return(-1);
+    }
+    count = wrappedRead(fd, rxBuffer, quantity);
+    if (count < 0)
+	{
+        perror("Failed to read device");
+        close(fd);
+        return(-1);
+    } else if (count != quantity)
+	{
+        fprintf(stderr, "Short read  from device, expected %d, got %d\n", quantity, count);
+        close(fd);
+        return(-1);
+    }
+    close(fd);
+    //print rxBuffer
+    for(int i = 0; i< BUFFER_LENGTH; i++)
+    {
+  		  std::cout<<"rxBuffer["<<i<<"]: "<<std::bitset<8>(rxBuffer[i])<<std::endl;
+    }
 
-  // the maximum size of internal address is 3 bytes
-  if (isize > 3){
-    isize = 3;
-  }
+	rxBufferIndex = 0;
+	rxBufferLength = count;
 
-  // write internal register address - most significant byte first
-  while (isize-- > 0)
-    write((uint8_t)(iaddress >> (isize*8)));
-  endTransmission(false);
-  }
-
-  // clamp to buffer length
-  if(quantity > BUFFER_LENGTH){
-    quantity = BUFFER_LENGTH;
-  }
-  // perform block read into buffer
-  uint8_t rd = fread(&rxBuffer, sizeof(uint8_t), quantity,fd);
-  if (rd == quantity)
-  {
-	std::cout<<"block-read OK"<<std::endl;
-  } 
-  else 
-  {
-	  perror("Error reading registers");
-  }
-  // set rx buffer iterator vars
-  rxBufferIndex = 0;
-  rxBufferLength = rd;
-
-  return rd;
+	return count;
 }
 
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint8_t sendStop) {
@@ -197,7 +178,7 @@ uint8_t TwoWire::requestFrom(int address, int quantity, int sendStop)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/*!  \fn requestFrom()
+/*!  \fn beginTransmission()
 *
 *   \param uint8_t address
 *   \return void
@@ -239,31 +220,41 @@ void TwoWire::beginTransmission(int address)
 *   \return number of sent bytes
 *   \brief send the tx buffer data bytewise to the target
 ******************************************************************************/
-uint8_t TwoWire::endTransmission(uint8_t sendStop) //TODO revisit and use i2c_smbus_write_block_data instead?
+uint8_t TwoWire::endTransmission(uint8_t sendStop)
 {
-	fd = fopen("/dev/i2c-1", "r+");
-	if (fd < 0 )
+	int8_t count = 0;
+	// transmit buffer (blocking)
+	fd = open(i2c_name, O_RDWR);
+    if (fd < 0)
 	{
-		perror("i2cOpen");
-		exit(1);
+        perror("Failed to open device");
+        return(-1);
+    }
+    if (ioctl(fd, I2C_SLAVE, txAddress) < 0)
+	{
+        perror("Failed to select device");
+        close(fd);
+        return(-1);
+    }
+	count = wrappedWrite(fd, txBuffer, txBufferLength);
+	if (count < 0)
+	{
+        perror("Failed to write reg");
+		close(fd);
+		return(-1);
 	}
-	int ret = 0;
-  // transmit buffer (blocking)
-    if( ioctl(fd, I2C_SLAVE, txAddress) < 0 ) //Set target device address
-    {
-    	perror("i2cSetAddress");
-    	exit(1);
-    }
-    ret = fwrite(txbuffer, sizeof(uint8_t), txBufferLength,fd);
-    if ( ret < 0 ) {
-    	perror("i2cWrite Error");
-    }
+	else if (count != txBufferLength)
+	{
+		fprintf(stderr, "Short write to device, expected %d, got %d\n", txBufferLength, count);
+        close(fd);
+		return(-1);
+	}
   // reset tx buffer iterator vars
   txBufferIndex = 0;
   txBufferLength = 0;
   // indicate that we are done transmitting
   transmitting = 0;
-  return ret;
+  return (uint8_t)count;
 }
 
 //	This provides backwards compatibility with the original
@@ -277,13 +268,6 @@ uint8_t TwoWire::endTransmission(void)
 // must be called in:
 // slave tx event callback
 // or after beginTransmission(address)
-///////////////////////////////////////////////////////////////////////////////
-/*!  \fn write()
-*
-*   \param uint8_t data
-*   \return TODO
-*   \brief write data byte to tx buffer
-******************************************************************************/
 size_t TwoWire::write(uint8_t data)
 {
   if(transmitting){
@@ -301,7 +285,6 @@ size_t TwoWire::write(uint8_t data)
   }else{
   // in slave send mode
     // reply to master
-    //twi_transmit(&data, 1); //TODO Bus Slave functionality i2c_smbus_write_byte
   }
   return 1;
 }
@@ -326,7 +309,6 @@ size_t TwoWire::write(const uint8_t *data, size_t quantity)
   }else{
   // in slave send mode
     // reply to master
-    //twi_transmit(data, quantity); //TODO Bus slave functionality i2c_smbus_write_block_data
   }
   return quantity;
 }
@@ -365,12 +347,6 @@ int TwoWire::read(void)
     value = rxBuffer[rxBufferIndex];
     ++rxBufferIndex;
   }
-  else
-  {
-	  std::cerr<<"No more data."<<std::endl;
-	  return 0;  
-  }
-
   return value;
 }
 
@@ -386,11 +362,11 @@ int TwoWire::read(void)
 ******************************************************************************/
 int TwoWire::peek(void)
 {
-  int value = -1;
+	int value = -1;
   
-  if(rxBufferIndex < rxBufferLength){
-    value = rxBuffer[rxBufferIndex];
-  }
+	if(rxBufferIndex < rxBufferLength){
+	value = rxBuffer[rxBufferIndex];
+}
 
   return value;
 }
@@ -455,3 +431,4 @@ void TwoWire::onRequest( void (*function)(void) )
 // Preinstantiate Objects //////////////////////////////////////////////////////
 
 TwoWire Wire = TwoWire();
+

@@ -8,7 +8,7 @@ using namespace std;
 	
 #define TARGET_ADDR 32	//0x20 is standard PCA9555 address
 #define TARGET_REG 0
-#define NUM_REGS 8		//PCA9555 has 8 registers
+#define NUM_REGS 7//PCA9555 has 8 registers
 
 void printRegisters()
 {
@@ -16,15 +16,15 @@ void printRegisters()
 	
 	Wire.beginTransmission(TARGET_ADDR);
 	Wire.write(6); //write to port 0 config register
-	Wire.write(170); //set bit mask 10101010
+	Wire.write(0xAA); //set bit mask 10101010
 	Wire.endTransmission();
 
-	Wire.beginTransmission(TARGET_ADDR);
-	Wire.write(0);
-	Wire.endTransmission();
-	Wire.requestFrom(TARGET_REG, NUM_REGS); //read the state of all registers
+//	Wire.beginTransmission(TARGET_ADDR);
+//	Wire.write(0);
+//	Wire.endTransmission();
+	Wire.requestFrom(TARGET_ADDR, NUM_REGS,TARGET_REG,0,0); //read the state of all registers
 	
-	for(int i=0; i<NUM_REGS;i++)
+	for(int i=TARGET_REG; i<8;i++)
 	{
 		ret = Wire.read();
 		cout<<"Register "<<i<<": "<<bitset<8>(ret)<<endl;

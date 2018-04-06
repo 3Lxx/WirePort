@@ -17,18 +17,26 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
   Modified 2012 by Todd Krein (todd@krein.org) to implement repeated starts
-  Ported to Linux SmBus library based on https://github.com/mhct/wire-linux
+  Ported 2018 to be used on Linux systems
 */
 
 #ifndef TwoWire_h
 #define TwoWire_h
 
 #include <inttypes.h>
-#include <string>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <linux/i2c-dev.h>
 
 #define BUFFER_LENGTH 32
-#define I2C_FILE_NAME "/dev/i2c-1"
 
 // WIRE_HAS_END means Wire has end()
 #define WIRE_HAS_END 1
@@ -36,7 +44,8 @@
 class TwoWire
 {
   private:
-	FILE *fd;	//File descriptor used to access i2c device
+	int fd; //File Descriptor for I2C
+	char i2c_name[12] = "/dev/i2c-1";
 	
     static uint8_t rxBuffer[];
     static uint8_t rxBufferIndex;
@@ -54,19 +63,18 @@ class TwoWire
     static void onReceiveService(uint8_t*, int);
   public:
     TwoWire();
-    TwoWire(std::string);
     void begin();
-   // void begin(uint8_t);
-   // void begin(int);
-    void end(); //TODO
-    void setClock(uint32_t); //TODO
+    void begin(uint8_t);
+    void begin(int);
+    void end();
+    void setClock(uint32_t);
     void beginTransmission(uint8_t);
     void beginTransmission(int);
     uint8_t endTransmission(void);
     uint8_t endTransmission(uint8_t);
     uint8_t requestFrom(uint8_t, uint8_t);
     uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
-    uint8_t requestFrom(uint8_t, uint8_t, uint32_t, uint8_t, uint8_t);
+	int8_t requestFrom(uint8_t, uint8_t, uint32_t, uint8_t, uint8_t);
     uint8_t requestFrom(int, int);
     uint8_t requestFrom(int, int, int);
     virtual size_t write(uint8_t);
@@ -78,12 +86,13 @@ class TwoWire
     void onReceive( void (*)(int) );
     void onRequest( void (*)(void) );
 
-    inline size_t write(unsigned long n) { return write((uint8_t)n); }
-    inline size_t write(long n) { return write((uint8_t)n); }
-    inline size_t write(unsigned int n) { return write((uint8_t)n); }
-    inline size_t write(int n) { return write((uint8_t)n); }
+//    inline size_t write(unsigned long n) { return write((uint8_t)n); }
+//    inline size_t write(long n) { return write((uint8_t)n); }
+//    inline size_t write(unsigned int n) { return write((uint8_t)n); }
+//    inline size_t write(int n) { return write((uint8_t)n); }
 };
 
 extern TwoWire Wire;
+
 #endif
 
